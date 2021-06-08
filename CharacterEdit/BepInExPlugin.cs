@@ -19,7 +19,7 @@ using UnityEngine.EventSystems;
 
 namespace CharacterEdit
 {
-    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.1.1")]
+    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.2.0")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -82,7 +82,7 @@ namespace CharacterEdit
                     {
                         List<SkillLayoutItemView> workerSkills = t.Field("workerSkills").GetValue<List<SkillLayoutItemView>>();
                         string skillName = rcr.gameObject.transform.parent.Find("Name").GetComponentInChildren<TextMeshProUGUI>().text;
-                        int skillIdx = workers[selected].Skills.Skills.IndexOf(workers[selected].Skills.Skills.FirstOrDefault(s => skillName == Singleton<LocalizationController>.Instance.GetText("skill_name_" + s.Id.ToString())));
+                        int skillIdx = workers[selected].Skills.Skills.FindIndex(s => skillName == Singleton<LocalizationController>.Instance.GetText("skill_name_" + s.Id.ToString()));
                         Traverse ts = Traverse.Create(workers[selected].Skills.Skills[skillIdx]);
 
                         if (Input.GetKey(KeyCode.LeftControl))
@@ -117,8 +117,86 @@ namespace CharacterEdit
                     }
                     else if (rcr.gameObject.transform.parent.name == "Avatar")
                     {
-
-                        if (Input.GetKey(KeyCode.LeftControl))
+                        
+                        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKey(KeyCode.LeftShift))
+                        {
+                            WorkerBodyPreview preview = MonoSingleton<WorkerImageRepository>.Instance.GetPrefab(workers[selected].Info.GetPhysicalLookKey()).GetComponentInChildren<WorkerBodyPreview>();
+                            if (preview.BodyParts.Count == 0)
+                                return; 
+                            Transform transform = preview.BodyParts[0];
+                            int index = 0;
+                            List<string> children = new List<string>();
+                            for (int i = 0; i < transform.childCount; i++)
+                            {
+                                if (transform.GetChild(i).name == workers[selected].Info.PhysicalLook.WorkerBody[0])
+                                    index = i;
+                                children.Add(transform.GetChild(i).name);
+                            }
+                            if (Input.mouseScrollDelta.y < 0 && index > 0)
+                            {
+                                index--;
+                            }
+                            else if (Input.mouseScrollDelta.y > 0 && index < children.Count - 1)
+                            {
+                                index++;
+                            }
+                            else
+                                return;
+                            workers[selected].Info.PhysicalLook.WorkerBody[0] = children[index];
+                        }
+                        else if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift))
+                        {
+                            WorkerBodyPreview preview = MonoSingleton<WorkerImageRepository>.Instance.GetPrefab(workers[selected].Info.GetPhysicalLookKey()).GetComponentInChildren<WorkerBodyPreview>();
+                            if (preview.BodyParts.Count < 2)
+                                return;
+                            Transform transform = preview.BodyParts[1];
+                            int index = 0;
+                            List<string> children = new List<string>();
+                            for (int i = 0; i < transform.childCount; i++)
+                            {
+                                if (transform.GetChild(i).name == workers[selected].Info.PhysicalLook.WorkerBody[1])
+                                    index = i;
+                                children.Add(transform.GetChild(i).name);
+                            }
+                            if (Input.mouseScrollDelta.y < 0 && index > 0)
+                            {
+                                index--;
+                            }
+                            else if (Input.mouseScrollDelta.y > 0 && index < children.Count - 1)
+                            {
+                                index++;
+                            }
+                            else
+                                return;
+                            workers[selected].Info.PhysicalLook.WorkerBody[1] = children[index];
+                        }
+                        else if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftAlt))
+                        {
+                            WorkerBodyPreview preview = MonoSingleton<WorkerImageRepository>.Instance.GetPrefab(workers[selected].Info.GetPhysicalLookKey()).GetComponentInChildren<WorkerBodyPreview>();
+                            if (preview.BodyParts.Count < 3)
+                                return;
+                            Transform transform = preview.BodyParts[2];
+                            int index = 0;
+                            List<string> children = new List<string>();
+                            for (int i = 0; i < transform.childCount; i++)
+                            {
+                                if (transform.GetChild(i).name == workers[selected].Info.PhysicalLook.WorkerBody[2])
+                                    index = i;
+                                children.Add(transform.GetChild(i).name);
+                            }
+                            if (Input.mouseScrollDelta.y < 0 && index > 0)
+                            {
+                                index--;
+                            }
+                            else if (Input.mouseScrollDelta.y > 0 && index < children.Count - 1)
+                            {
+                                index++;
+                            }
+                            else
+                                return;
+                            workers[selected].Info.PhysicalLook.WorkerBody[2] = children[index];
+                        }
+                        else if (Input.GetKey(KeyCode.LeftControl))
                         {
                             tc.Field("creationID").SetValue(0);
                             if (workers[selected].Info.Gender == Gender.Female)
@@ -129,11 +207,56 @@ namespace CharacterEdit
                             ti.Field("weightCoefficient").SetValue(tg.Method("GetWeightCoefficient", new object[] { workers[selected].Info.Height }).GetValue<float>());
 
                             workers[selected].Info.SetIgnoredTypes(tg.Method("GetPhysicalIgnoreTypes", new object[] { new List<WorkerCharacteristicType>(), workers[selected].Info.Gender, workers[selected].Info.Height, workers[selected].Info.WeightCoefficient }).GetValue<List<WorkerCharacteristicType>>());
+                            workers[selected].Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workers[selected] }).GetValue<WorkerPhysicalLook>());
                         }
-                        tc.Field("equipItemOnSpawn").SetValue(MonoSingleton<GameStartController>.Instance.SelectedScenario.VillagerConstraints.DefaultClothes.GetRandom() ?? "good_linen_winter_clothes");
-                        workers[selected].Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workers[selected] }).GetValue<WorkerPhysicalLook>());
-                        MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workers[selected]);
+                        else if (Input.GetKey(KeyCode.LeftAlt))
+                        {
+                            string color = workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[0]];
+
+                            int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.FindIndex(s => s == color);
+
+                            if (Input.mouseScrollDelta.y < 0 && index > 0)
+                            {
+                                index--;
+                            }
+                            else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.Count - 1)
+                            {
+                                index++;
+                            }
+                            else
+                                return;
+                            workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[0]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor[index];
+                        }
+                        else if (Input.GetKey(KeyCode.LeftShift))
+                        {
+                            string color = workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[1]];
+
+                            int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.FindIndex(s => s == color);
+
+                            if (Input.mouseScrollDelta.y < 0 && index > 0)
+                            {
+                                index--;
+                            }
+                            else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.Count - 1)
+                            {
+                                index++;
+                            }
+                            else
+                                return;
+                            workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[1]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor[index];
+
+                        }
+                        else
+                            workers[selected].Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workers[selected] }).GetValue<WorkerPhysicalLook>());
+
+                        //tc.Field("equipItemOnSpawn").SetValue(MonoSingleton<GameStartController>.Instance.SelectedScenario.VillagerConstraints.DefaultClothes.GetRandom() ?? "good_linen_winter_clothes");
                         t.Method("ShowWorker", new object[] { selected }).GetValue();
+                        MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workers[selected]);
+                        MonoSingleton<TaskController>.Instance.WaitForNextFrame().Then(delegate
+                        {
+                            MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workers[selected]);
+                            t.Method("UpdateTabs", new object[] { selected }).GetValue();
+                        });
                         return;
                     }
                     else if (rcr.gameObject.transform.parent.name == "BackStoryTitle")
@@ -142,7 +265,7 @@ namespace CharacterEdit
                         if (Input.GetKey(KeyCode.LeftControl))
                         {
                             List<BackStory> backstories = (List<BackStory>)typeof(BackgroundRepositoryBase<BackStoryRepository, BackStory>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackStoryRepository>.Instance);
-                            index = backstories.IndexOf(backstories.FirstOrDefault(b => b == workers[selected].Info.BackStory));
+                            index = backstories.FindIndex(b => b == workers[selected].Info.BackStory);
                             if (Input.mouseScrollDelta.y < 0 && index > 0)
                             {
                                 index--;
@@ -156,7 +279,7 @@ namespace CharacterEdit
                         else
                         {
                             List<Background> backgrounds = (List<Background>)typeof(BackgroundRepositoryBase<BackgroundRepository, Background>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackgroundRepository>.Instance);
-                            index = backgrounds.IndexOf(backgrounds.FirstOrDefault(b => b == workers[selected].Info.Background));
+                            index = backgrounds.FindIndex(b => b == workers[selected].Info.Background);
                             if (Input.mouseScrollDelta.y < 0 && index > 0)
                             {
                                 index--;
@@ -207,7 +330,7 @@ namespace CharacterEdit
                             string perkId = Traverse.Create(perkTooltipView).Field("id").GetValue<string>();
 
                             List<Perk> allPerks = Traverse.Create(MonoSingleton<PerkRepository>.Instance).Field("perks").GetValue<List<Perk>>();
-                            int allPerksIndex = allPerks.IndexOf(allPerks.FirstOrDefault(p => p.Name == perkId));
+                            int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
 
                             int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
                             int perkInt = int.Parse(perkId.Split('_')[1]);
@@ -255,7 +378,6 @@ namespace CharacterEdit
                         }
                         else if (Input.mouseScrollDelta.y > 0 && age < MonoSingleton<GenerationSettingsRepository>.Instance.Settings.AgeRange.Max)
                             ti.Field("age").SetValue(age + 1);
-                        MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workers[selected]);
                         t.Method("ShowWorker", new object[] { selected }).GetValue();
                         return;
                     }
