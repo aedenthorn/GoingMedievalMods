@@ -1,26 +1,17 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
-using NSEipix;
 using NSEipix.Base;
-using NSMedieval;
-using NSMedieval.Controllers;
 using NSMedieval.DevConsole;
-using NSMedieval.Model;
-using NSMedieval.Repository;
-using NSMedieval.State;
-using NSMedieval.Types;
 using NSMedieval.UI;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 namespace DevTools
 {
-    [BepInPlugin("aedenthorn.DevTools", "Dev Tools", "0.1.0")]
+    [BepInPlugin("aedenthorn.DevTools", "Dev Tools", "0.2.0")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -28,8 +19,6 @@ namespace DevTools
         public static ConfigEntry<bool> modEnabled;
         public static ConfigEntry<bool> isDebug;
         public static ConfigEntry<int> nexusID;
-
-        private static Vector3 lastMousePos;
 
         public static void Dbgl(string str = "", bool pref = true)
         {
@@ -69,6 +58,22 @@ namespace DevTools
                 ___mainContainer.SetActive(!___mainContainer.activeSelf);
 
                 return false;
+            }
+        }
+        [HarmonyPatch(typeof(DeveloperPanelView), "FlushMenuItems")]
+        static class DeveloperPanelView_ReparentMenuItems_Patch
+        {
+            static void Prefix(DeveloperPanelView __instance, ref GameObject ___contentParent)
+            {
+                if (!modEnabled.Value)
+                    return;
+                ___contentParent.GetComponent<GridLayoutGroup>().constraint = GridLayoutGroup.Constraint.Flexible;
+                if(___contentParent.GetComponent<ContentSizeFitter>() == null)
+                    ___contentParent.AddComponent<ContentSizeFitter>();
+                ___contentParent.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                ___contentParent.GetComponent<RectTransform>().pivot = new Vector2(0, 1);
+                ___contentParent.GetComponent<RectTransform>().pivot = new Vector2(0, 1);
+
             }
         }
     }

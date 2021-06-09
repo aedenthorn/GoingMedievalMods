@@ -5,21 +5,24 @@ using NSEipix;
 using NSEipix.Base;
 using NSMedieval;
 using NSMedieval.Controllers;
+using NSMedieval.Manager;
 using NSMedieval.Model;
 using NSMedieval.Repository;
 using NSMedieval.State;
 using NSMedieval.Types;
 using NSMedieval.UI;
+using NSMedieval.View;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 namespace CharacterEdit
 {
-    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.2.0")]
+    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.4.2")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -78,7 +81,7 @@ namespace CharacterEdit
                 EventSystem.current.RaycastAll(eventData, raycastResults);
                 foreach (RaycastResult rcr in raycastResults)
                 {
-                    if (rcr.gameObject.transform.parent.name.StartsWith("CharacterSkill"))
+                    if (rcr.gameObject.transform.parent?.name.StartsWith("CharacterSkill") == true)
                     {
                         List<SkillLayoutItemView> workerSkills = t.Field("workerSkills").GetValue<List<SkillLayoutItemView>>();
                         string skillName = rcr.gameObject.transform.parent.Find("Name").GetComponentInChildren<TextMeshProUGUI>().text;
@@ -115,7 +118,7 @@ namespace CharacterEdit
                         return;
 
                     }
-                    else if (rcr.gameObject.transform.parent.name == "Avatar")
+                    else if (rcr.gameObject.transform.parent?.name == "Avatar")
                     {
                         
                         if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKey(KeyCode.LeftShift))
@@ -259,7 +262,7 @@ namespace CharacterEdit
                         });
                         return;
                     }
-                    else if (rcr.gameObject.transform.parent.name == "BackStoryTitle")
+                    else if (rcr.gameObject.transform.parent?.name == "BackStoryTitle")
                     {
                         int index;
                         if (Input.GetKey(KeyCode.LeftControl))
@@ -295,7 +298,7 @@ namespace CharacterEdit
                         t.Method("InitializeGroupSkills").GetValue();
                         return;
                     }
-                    else if (rcr.gameObject.transform.parent.name == "PerksList")
+                    else if (rcr.gameObject.transform.parent?.name == "PerksList")
                     {
                         if (Input.GetKey(KeyCode.LeftControl))
                         {
@@ -304,13 +307,12 @@ namespace CharacterEdit
 
                             List<Perk> allPerks = Traverse.Create(MonoSingleton<PerkRepository>.Instance).Field("perks").GetValue<List<Perk>>();
 
-                            int totalPerkCount = rcr.gameObject.transform.parent.childCount;
-                            if (Input.mouseScrollDelta.y < 0 && perks.Count > 0)
+                            if (Input.mouseScrollDelta.y < 0 && perks.Count > 1)
                             {
                                 perkIds.RemoveAt(perkIds.Count - 1);
                                 perks.RemoveAt(perks.Count - 1);
                             }
-                            else if (Input.mouseScrollDelta.y > 0 && perks.Count < 4)
+                            else if (Input.mouseScrollDelta.y > 0 && perks.Count < 3)
                             {
                                 int idx = 0;
                                 while (perkIds.Contains(allPerks[idx].Name))
@@ -356,7 +358,7 @@ namespace CharacterEdit
                         }
                         return;
                     }
-                    else if (rcr.gameObject.transform.parent.name.StartsWith("ReligiousAlig") || rcr.gameObject.transform.parent.parent.name.StartsWith("ReligiousAlig"))
+                    else if (rcr.gameObject.transform.parent?.name.StartsWith("ReligiousAlig") == true || rcr.gameObject.transform.parent?.parent?.name.StartsWith("ReligiousAlig") == true)
                     {
                         float align = workers[selected].Info.ReligiousAlignment;
                         if (Input.mouseScrollDelta.y < 0 && workers[selected].Info.ReligiousAlignment > 0)
@@ -397,6 +399,370 @@ namespace CharacterEdit
                 }
             }
         }
+
+        private void Update()
+        {
+            if (SceneManager.GetActiveScene().name != "MainScene")
+                return;
+            if (!modEnabled.Value || Input.mouseScrollDelta.y == 0)
+            {
+                lastMousePos = Input.mousePosition;
+                return;
+            }
+            var selectionPanel = AccessTools.FieldRefAccess<UIController, SelectionPanelManager>(MonoSingleton<UIController>.Instance, "selectionPanel");
+            if (selectionPanel == null || !selectionPanel.MainPanel.activeSelf)
+                return;
+            var workerExtraWindow = AccessTools.FieldRefAccess<SelectionPanelView, SelectionExtraWorker> (selectionPanel.PanelView, "workerExtraWindow");
+            if (workerExtraWindow == null || !workerExtraWindow.gameObject.activeSelf)
+                return;
+
+
+            Traverse t = Traverse.Create(workerExtraWindow);
+            Traverse tc = Traverse.Create(workerExtraWindow.Worker);
+            Traverse ti = Traverse.Create(workerExtraWindow.Worker.Info);
+            Traverse tg = Traverse.Create(MonoSingleton<WorkerGenerator>.Instance);
+
+            Vector3 mousePos = Input.mousePosition;
+
+            if (lastMousePos == Vector3.zero)
+                lastMousePos = mousePos;
+
+            PointerEventData eventData = new PointerEventData(EventSystem.current)
+            {
+                position = lastMousePos
+            };
+
+            Dbgl("Raycasting");
+
+            List<RaycastResult> raycastResults = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(eventData, raycastResults);
+            foreach (RaycastResult rcr in raycastResults)
+            {
+                if (rcr.gameObject.layer != LayerMask.NameToLayer("UI") && rcr.gameObject.layer != LayerMask.NameToLayer("Default"))
+                    continue;
+
+                if (rcr.gameObject.transform.name == "SkillBar")
+                {
+                    string skillName = rcr.gameObject.transform.parent.Find("Title").GetComponentInChildren<TextMeshProUGUI>().text;
+                    int skillIdx = workerExtraWindow.Worker.Skills.Skills.FindIndex(s => skillName == Singleton<LocalizationController>.Instance.GetText("skill_name_" + s.Id.ToString()));
+                    if(skillIdx < 0)
+                    {
+                        Dbgl($"invalid skill {skillName} {skillIdx}");
+                        return;
+                    }
+                    Traverse ts = Traverse.Create(workerExtraWindow.Worker.Skills.Skills[skillIdx]);
+
+                    if (Input.GetKey(KeyCode.LeftControl))
+                    {
+                        int skillPassion = workerExtraWindow.Worker.Skills.Skills[skillIdx].PassionLevel;
+                        if (Input.mouseScrollDelta.y < 0 && skillPassion > 0)
+                        {
+                            ts.Field("passionLevel").SetValue(skillPassion - 1);
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && skillPassion <= MonoSingleton<GenerationSettingsRepository>.Instance.Settings.Passions.Count)
+                            ts.Field("passionLevel").SetValue(skillPassion + 1);
+                    }
+                    else
+                    {
+                        int skillLevel = workerExtraWindow.Worker.Skills.Skills[skillIdx].Level;
+                        float skillExp = workerExtraWindow.Worker.Skills.Skills[skillIdx].Experience;
+                        if (Input.mouseScrollDelta.y < 0 && skillLevel > 1)
+                        {
+                            ts.Field("experience").SetValue(skillExp
+                                - (skillExp - MonoSingleton<SkillLevelsRepository>.Instance.GetXpRequirement(workerExtraWindow.Worker.Skills.Skills[skillIdx].Id, workerExtraWindow.Worker.Skills.Skills[skillIdx].Level))
+                                - (MonoSingleton<SkillLevelsRepository>.Instance.GetXpRequirement(workerExtraWindow.Worker.Skills.Skills[skillIdx].Id, workerExtraWindow.Worker.Skills.Skills[skillIdx].Level) - MonoSingleton<SkillLevelsRepository>.Instance.GetXpRequirement(workerExtraWindow.Worker.Skills.Skills[skillIdx].Id, workerExtraWindow.Worker.Skills.Skills[skillIdx].Level - 1))
+                                );
+                            ts.Field("level").SetValue(skillLevel - 1);
+                        }
+                        else if (Input.mouseScrollDelta.y > 0)
+                            workerExtraWindow.Worker.Skills.Skills[skillIdx].AddLevels(1);
+                    }
+                    workerExtraWindow.UpdateData();
+                    return;
+                }
+                else if (rcr.gameObject.transform.parent?.name == "Stats" && rcr.gameObject.transform.name == "IconHolder")
+                {
+                    if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKey(KeyCode.LeftShift))
+                    {
+                        WorkerBodyPreview preview = MonoSingleton<WorkerImageRepository>.Instance.GetPrefab(workerExtraWindow.Worker.Info.GetPhysicalLookKey()).GetComponentInChildren<WorkerBodyPreview>();
+                        if (preview.BodyParts.Count == 0)
+                            return;
+                        Transform transform = preview.BodyParts[0];
+                        int index = 0;
+                        List<string> children = new List<string>();
+                        for (int i = 0; i < transform.childCount; i++)
+                        {
+                            if (transform.GetChild(i).name == workerExtraWindow.Worker.Info.PhysicalLook.WorkerBody[0])
+                                index = i;
+                            children.Add(transform.GetChild(i).name);
+                        }
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < children.Count - 1)
+                        {
+                            index++;
+                        }
+                        else
+                            return;
+                        workerExtraWindow.Worker.Info.PhysicalLook.WorkerBody[0] = children[index];
+                    }
+                    else if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift))
+                    {
+                        WorkerBodyPreview preview = MonoSingleton<WorkerImageRepository>.Instance.GetPrefab(workerExtraWindow.Worker.Info.GetPhysicalLookKey()).GetComponentInChildren<WorkerBodyPreview>();
+                        if (preview.BodyParts.Count < 2)
+                            return;
+                        Transform transform = preview.BodyParts[1];
+                        int index = 0;
+                        List<string> children = new List<string>();
+                        for (int i = 0; i < transform.childCount; i++)
+                        {
+                            if (transform.GetChild(i).name == workerExtraWindow.Worker.Info.PhysicalLook.WorkerBody[1])
+                                index = i;
+                            children.Add(transform.GetChild(i).name);
+                        }
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < children.Count - 1)
+                        {
+                            index++;
+                        }
+                        else
+                            return;
+                        workerExtraWindow.Worker.Info.PhysicalLook.WorkerBody[1] = children[index];
+                    }
+                    else if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftAlt))
+                    {
+                        WorkerBodyPreview preview = MonoSingleton<WorkerImageRepository>.Instance.GetPrefab(workerExtraWindow.Worker.Info.GetPhysicalLookKey()).GetComponentInChildren<WorkerBodyPreview>();
+                        if (preview.BodyParts.Count < 3)
+                            return;
+                        Transform transform = preview.BodyParts[2];
+                        int index = 0;
+                        List<string> children = new List<string>();
+                        for (int i = 0; i < transform.childCount; i++)
+                        {
+                            if (transform.GetChild(i).name == workerExtraWindow.Worker.Info.PhysicalLook.WorkerBody[2])
+                                index = i;
+                            children.Add(transform.GetChild(i).name);
+                        }
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < children.Count - 1)
+                        {
+                            index++;
+                        }
+                        else
+                            return;
+                        workerExtraWindow.Worker.Info.PhysicalLook.WorkerBody[2] = children[index];
+                    }
+                    else if (Input.GetKey(KeyCode.LeftControl))
+                    {
+                        return;
+                        tc.Field("creationID").SetValue(0);
+                        if (workerExtraWindow.Worker.Info.Gender == Gender.Female)
+                            ti.Field("gender").SetValue(Gender.Male);
+                        else
+                            ti.Field("gender").SetValue(Gender.Female);
+                        ti.Field("height").SetValue(tg.Method("GetHeight", new object[] { workerExtraWindow.Worker.Info.Gender }).GetValue<float>());
+                        ti.Field("weightCoefficient").SetValue(tg.Method("GetWeightCoefficient", new object[] { workerExtraWindow.Worker.Info.Height }).GetValue<float>());
+
+                        workerExtraWindow.Worker.Info.SetIgnoredTypes(tg.Method("GetPhysicalIgnoreTypes", new object[] { new List<WorkerCharacteristicType>(), workerExtraWindow.Worker.Info.Gender, workerExtraWindow.Worker.Info.Height, workerExtraWindow.Worker.Info.WeightCoefficient }).GetValue<List<WorkerCharacteristicType>>());
+                        workerExtraWindow.Worker.Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workerExtraWindow.Worker }).GetValue<WorkerPhysicalLook>());
+                    }
+                    else if (Input.GetKey(KeyCode.LeftAlt))
+                    {
+                        string color = workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[0]];
+
+                        int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.FindIndex(s => s == color);
+
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.Count - 1)
+                        {
+                            index++;
+                        }
+                        else
+                            return;
+                        workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[0]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor[index];
+                    }
+                    else if (Input.GetKey(KeyCode.LeftShift))
+                    {
+                        string color = workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[1]];
+
+                        int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.FindIndex(s => s == color);
+
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.Count - 1)
+                        {
+                            index++;
+                        }
+                        else
+                            return;
+                        workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[1]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor[index];
+
+                    }
+                    else
+                        workerExtraWindow.Worker.Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workerExtraWindow.Worker }).GetValue<WorkerPhysicalLook>());
+
+                    MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workerExtraWindow.Worker);
+
+                    MonoSingleton<TaskController>.Instance.WaitForNextFrame().Then(delegate
+                    {
+                        MonoSingleton<WorkerManager>.Instance.GetView(workerExtraWindow.Worker).BodyPreview.Setup(workerExtraWindow.Worker);
+                        AccessTools.Method(typeof(WorkerView), "TakeScreenshot").Invoke(MonoSingleton<WorkerManager>.Instance.GetView(workerExtraWindow.Worker), new object[] { });
+                        workerExtraWindow.Worker.SetModified(SelectionPanelBlockType.WorkerStats, true);
+                        MonoSingleton<WorkerManager>.Instance.GetView(workerExtraWindow.Worker).BodyPreview.ShowEntity();
+                    });
+                    return;
+                }
+                else if (rcr.gameObject.transform.parent?.name == "Background" && rcr.gameObject.transform.parent?.parent?.name == "Infos")
+                {
+                    int index;
+                    if (Input.GetKey(KeyCode.LeftControl))
+                    {
+                        List<BackStory> backstories = (List<BackStory>)typeof(BackgroundRepositoryBase<BackStoryRepository, BackStory>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackStoryRepository>.Instance);
+                        index = backstories.FindIndex(b => b == workerExtraWindow.Worker.Info.BackStory);
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < backstories.Count - 1)
+                        {
+                            index++;
+                        }
+                        workerExtraWindow.Worker.Info.SetBackStory(backstories[index]);
+                    }
+                    else
+                    {
+                        List<Background> backgrounds = (List<Background>)typeof(BackgroundRepositoryBase<BackgroundRepository, Background>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackgroundRepository>.Instance);
+                        index = backgrounds.FindIndex(b => b == workerExtraWindow.Worker.Info.Background);
+                        if (Input.mouseScrollDelta.y < 0 && index > 0)
+                        {
+                            index--;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && index < backgrounds.Count - 1)
+                        {
+                            index++;
+                        }
+                        workerExtraWindow.Worker.Info.SetBackground(backgrounds[index]);
+                    }
+                    workerExtraWindow.UpdateData();
+                    return;
+                }
+                else if (rcr.gameObject.transform.parent?.parent?.name == "Perks" && rcr.gameObject.transform.name.StartsWith("CharacterPerk"))
+                {
+                    List<string> perkIds = tc.Field("perkIds").GetValue<List<string>>();
+                    List<Perk> perks = tc.Field("perks").GetValue<List<Perk>>();
+                    List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll().ToList<Perk>();
+
+                    if (Input.GetKey(KeyCode.LeftControl))
+                    {
+                        if (Input.mouseScrollDelta.y < 0 && perks.Count > 1)
+                        {
+                            perkIds.RemoveAt(perkIds.Count - 1);
+                            perks.RemoveAt(perks.Count - 1);
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && perks.Count < 3)
+                        {
+                            int idx = 0;
+                            while (perkIds.Contains(allPerks[idx].Name))
+                                idx++;
+                            perkIds.Add(allPerks[idx].Name);
+                            perks.Add(allPerks[idx]);
+                        }
+                    }
+                    else
+                    {
+                        PerkTooltipView perkTooltipView = rcr.gameObject.GetComponent<PerkTooltipView>();
+                        string perkId = Traverse.Create(perkTooltipView).Field("id").GetValue<string>();
+
+                        int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
+
+                        int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
+                        int perkInt = int.Parse(perkId.Split('_')[1]);
+                        if (Input.mouseScrollDelta.y < 0 && allPerksIndex > 0)
+                        {
+                            while (allPerksIndex >= 0 && perkIds.Contains(allPerks[allPerksIndex].Name))
+                                allPerksIndex--;
+                            if (allPerksIndex < 0)
+                                return;
+                        }
+                        else if (Input.mouseScrollDelta.y > 0 && allPerksIndex < allPerks.Count - 1)
+                        {
+                            while (allPerksIndex < allPerks.Count - 1 && perkIds.Contains(allPerks[allPerksIndex].Name))
+                                allPerksIndex++;
+                            if (allPerksIndex >= allPerks.Count)
+                                return;
+                        }
+
+                        perkIds[perkIndex] = allPerks[allPerksIndex].Name;
+                        perks[perkIndex] = allPerks[allPerksIndex];
+                    }
+                    var panel = t.Field("panels").GetValue<SelectionExtraPanelBase[]>()[t.Field("selectedPanel").GetValue<int>()];
+                    AccessTools.Field(panel.GetType(), "currentWorker").SetValue(panel, null);
+                    AccessTools.Method(panel.GetType(), "SetupTabPanel").Invoke(panel, new object[] { });
+                    return;
+                }
+                else if (rcr.gameObject.transform.parent?.name == ("Religious") || rcr.gameObject.transform.parent?.parent?.name == ("Religious"))
+                {
+                    float align = workerExtraWindow.Worker.Info.ReligiousAlignment;
+                    if (Input.mouseScrollDelta.y < 0 && workerExtraWindow.Worker.Info.ReligiousAlignment > 0)
+                        align -= Input.GetKey(KeyCode.LeftControl) ? 0.1f : 0.01f;
+                    else if (Input.mouseScrollDelta.y > 0 && workerExtraWindow.Worker.Info.ReligiousAlignment < 1)
+                        align += Input.GetKey(KeyCode.LeftControl) ? 0.1f : 0.01f;
+
+                    ti.Field("religiousAlignment").SetValue(Mathf.Clamp01(align));
+                    workerExtraWindow.UpdateData();
+                    return;
+                }
+                else if (rcr.gameObject.transform.parent?.name == "Age" && rcr.gameObject.transform.parent?.parent?.name == "Infos")
+                {
+                    int age = ti.Field("age").GetValue<int>();
+                    if (Input.mouseScrollDelta.y < 0 && age > MonoSingleton<GenerationSettingsRepository>.Instance.Settings.AgeRange.Min)
+                    {
+                        ti.Field("age").SetValue(age - 1);
+                    }
+                    else if (Input.mouseScrollDelta.y > 0 && age < MonoSingleton<GenerationSettingsRepository>.Instance.Settings.AgeRange.Max)
+                        ti.Field("age").SetValue(age + 1);
+                    workerExtraWindow.UpdateData();
+                    return;
+                }
+                else if (rcr.gameObject.transform.parent?.name == "Height" && rcr.gameObject.transform.parent?.parent?.name == "Infos")
+                {
+                    float height = ti.Field("height").GetValue<float>();
+                    if (Input.mouseScrollDelta.y < 0 && height > MonoSingleton<GenerationSettingsRepository>.Instance.Settings.HeightRange.Min)
+                    {
+                        ti.Field("height").SetValue(height - 1);
+                    }
+                    else if (Input.mouseScrollDelta.y > 0 && height < MonoSingleton<GenerationSettingsRepository>.Instance.Settings.HeightRange.Max)
+                        ti.Field("height").SetValue(height + 1);
+
+                    MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workerExtraWindow.Worker);
+
+                    MonoSingleton<TaskController>.Instance.WaitForNextFrame().Then(delegate
+                    {
+                        MonoSingleton<WorkerManager>.Instance.GetView(workerExtraWindow.Worker).BodyPreview.Setup(workerExtraWindow.Worker);
+                        AccessTools.Method(typeof(WorkerView), "TakeScreenshot").Invoke(MonoSingleton<WorkerManager>.Instance.GetView(workerExtraWindow.Worker), new object[] { });
+                        workerExtraWindow.Worker.SetModified(SelectionPanelBlockType.WorkerStats, true);
+                        MonoSingleton<WorkerManager>.Instance.GetView(workerExtraWindow.Worker).BodyPreview.ShowEntity();
+                    });
+
+                    workerExtraWindow.UpdateData();
+                    return;
+                }
+            }
+        }
+        
         //[HarmonyPatch(typeof(HumanoidBodyPreview), "ShowBody")]
         static class Test_Patch
         {
