@@ -22,7 +22,7 @@ using UnityEngine.SceneManagement;
 
 namespace CharacterEdit
 {
-    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.4.2")]
+    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.5.1")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -312,7 +312,7 @@ namespace CharacterEdit
                                 perkIds.RemoveAt(perkIds.Count - 1);
                                 perks.RemoveAt(perks.Count - 1);
                             }
-                            else if (Input.mouseScrollDelta.y > 0 && perks.Count < 3)
+                            else if (Input.mouseScrollDelta.y > 0 && perks.Count < 10)
                             {
                                 int idx = 0;
                                 while (perkIds.Contains(allPerks[idx].Name))
@@ -431,8 +431,6 @@ namespace CharacterEdit
             {
                 position = lastMousePos
             };
-
-            Dbgl("Raycasting");
 
             List<RaycastResult> raycastResults = new List<RaycastResult>();
             EventSystem.current.RaycastAll(eventData, raycastResults);
@@ -672,7 +670,7 @@ namespace CharacterEdit
                             perkIds.RemoveAt(perkIds.Count - 1);
                             perks.RemoveAt(perks.Count - 1);
                         }
-                        else if (Input.mouseScrollDelta.y > 0 && perks.Count < 3)
+                        else if (Input.mouseScrollDelta.y > 0 && perks.Count < 10)
                         {
                             int idx = 0;
                             while (perkIds.Contains(allPerks[idx].Name))
@@ -710,7 +708,7 @@ namespace CharacterEdit
                     }
                     var panel = t.Field("panels").GetValue<SelectionExtraPanelBase[]>()[t.Field("selectedPanel").GetValue<int>()];
                     AccessTools.Field(panel.GetType(), "currentWorker").SetValue(panel, null);
-                    AccessTools.Method(panel.GetType(), "SetupTabPanel").Invoke(panel, new object[] { });
+                    AccessTools.Method(panel.GetType(), "CreatePerks").Invoke(panel, new object[] { });
                     return;
                 }
                 else if (rcr.gameObject.transform.parent?.name == ("Religious") || rcr.gameObject.transform.parent?.parent?.name == ("Religious"))

@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CharacterEdit", "CharacterE
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevTools", "DevTools\DevTools.csproj", "{7C48ED1E-4C15-4BA9-A1AB-EEF5BEE43AE9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataModFramework", "DataModFramework\DataModFramework.csproj", "{9E960647-9EB6-40E4-92CE-217347ED9498}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataModFramework", "DataModFramework\DataModFramework.csproj", "{9E960647-9EB6-40E4-92CE-217347ED9498}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomMapSizes", "CustomMapSizes\CustomMapSizes.csproj", "{80B384D3-D6F8-4B28-B6C0-4D9A451DB91F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{9E960647-9EB6-40E4-92CE-217347ED9498}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E960647-9EB6-40E4-92CE-217347ED9498}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E960647-9EB6-40E4-92CE-217347ED9498}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80B384D3-D6F8-4B28-B6C0-4D9A451DB91F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80B384D3-D6F8-4B28-B6C0-4D9A451DB91F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80B384D3-D6F8-4B28-B6C0-4D9A451DB91F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80B384D3-D6F8-4B28-B6C0-4D9A451DB91F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
