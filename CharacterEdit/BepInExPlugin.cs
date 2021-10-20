@@ -22,7 +22,7 @@ using UnityEngine.SceneManagement;
 
 namespace CharacterEdit
 {
-    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.5.1")]
+    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.6.1")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -61,10 +61,10 @@ namespace CharacterEdit
                 }
 
                 Traverse t = Traverse.Create(__instance);
-                List<WorkerInstance> workers = t.Field("workers").GetValue<List<WorkerInstance>>();
-                int selected = t.Field("selected").GetValue<int>();
-                Traverse tc = Traverse.Create(workers[selected]);
-                Traverse ti = Traverse.Create(workers[selected].Info);
+                List<WorkerInstance> workers = MonoSingleton<CharacterEditController>.Instance.Workers;
+                int selected = MonoSingleton<CharacterEditController>.Instance.Selected;
+                Traverse tc = Traverse.Create(MonoSingleton<CharacterEditController>.Instance.SelectedWorker);
+                Traverse ti = Traverse.Create(MonoSingleton<CharacterEditController>.Instance.SelectedWorker.Info);
                 Traverse tg = Traverse.Create(MonoSingleton<WorkerGenerator>.Instance);
 
                 Vector3 mousePos = Input.mousePosition;
@@ -83,10 +83,12 @@ namespace CharacterEdit
                 {
                     if (rcr.gameObject.transform.parent?.name.StartsWith("CharacterSkill") == true)
                     {
-                        List<SkillLayoutItemView> workerSkills = t.Field("workerSkills").GetValue<List<SkillLayoutItemView>>();
+                        Dbgl("scrolled on skill");
+                        List<EditableSkillLayoutItemView> workerSkills = t.Field("workerSkills").GetValue<List<EditableSkillLayoutItemView>>();
                         string skillName = rcr.gameObject.transform.parent.Find("Name").GetComponentInChildren<TextMeshProUGUI>().text;
                         int skillIdx = workers[selected].Skills.Skills.FindIndex(s => skillName == Singleton<LocalizationController>.Instance.GetText("skill_name_" + s.Id.ToString()));
                         Traverse ts = Traverse.Create(workers[selected].Skills.Skills[skillIdx]);
+
 
                         if (Input.GetKey(KeyCode.LeftControl))
                         {
@@ -113,8 +115,8 @@ namespace CharacterEdit
                             else if (Input.mouseScrollDelta.y > 0)
                                 workers[selected].Skills.Skills[skillIdx].AddLevels(1);
                         }
-                        t.Method("ShowWorker", new object[] { selected }).GetValue();
-                        t.Method("InitializeGroupSkills").GetValue();
+                        t.Method("ShowWorker", new object[] { }).GetValue();
+                        t.Method("SetGroupSkills").GetValue();
                         return;
 
                     }
@@ -216,44 +218,44 @@ namespace CharacterEdit
                         {
                             string color = workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[0]];
 
-                            int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.FindIndex(s => s == color);
+                            int index = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").SkinColor.FindIndex(s => s == color);
 
                             if (Input.mouseScrollDelta.y < 0 && index > 0)
                             {
                                 index--;
                             }
-                            else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.Count - 1)
+                            else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").SkinColor.Count - 1)
                             {
                                 index++;
                             }
                             else
                                 return;
-                            workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[0]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor[index];
+                            workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[0]] = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").SkinColor[index];
                         }
                         else if (Input.GetKey(KeyCode.LeftShift))
                         {
                             string color = workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[1]];
 
-                            int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.FindIndex(s => s == color);
+                            int index = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").HairColor.FindIndex(s => s == color);
 
                             if (Input.mouseScrollDelta.y < 0 && index > 0)
                             {
                                 index--;
                             }
-                            else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.Count - 1)
+                            else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").HairColor.Count - 1)
                             {
                                 index++;
                             }
                             else
                                 return;
-                            workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[1]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor[index];
+                            workers[selected].Info.PhysicalLook.BodyColors[workers[selected].Info.PhysicalLook.ShaderParameters[1]] = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").HairColor[index];
 
                         }
                         else
                             workers[selected].Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workers[selected] }).GetValue<WorkerPhysicalLook>());
 
                         //tc.Field("equipItemOnSpawn").SetValue(MonoSingleton<GameStartController>.Instance.SelectedScenario.VillagerConstraints.DefaultClothes.GetRandom() ?? "good_linen_winter_clothes");
-                        t.Method("ShowWorker", new object[] { selected }).GetValue();
+                        t.Method("ShowWorker", new object[] { }).GetValue();
                         MonoSingleton<WorkerImageController>.Instance.CreatingWorker(workers[selected]);
                         MonoSingleton<TaskController>.Instance.WaitForNextFrame().Then(delegate
                         {
@@ -294,8 +296,8 @@ namespace CharacterEdit
                             workers[selected].Info.SetBackground(backgrounds[index]);
                         }
 
-                        t.Method("ShowWorker", new object[] { selected }).GetValue();
-                        t.Method("InitializeGroupSkills").GetValue();
+                        t.Method("ShowWorker", new object[] { }).GetValue();
+                        t.Method("SetGroupSkills").GetValue();
                         return;
                     }
                     else if (rcr.gameObject.transform.parent?.name == "PerksList")
@@ -321,8 +323,8 @@ namespace CharacterEdit
                                 perks.Add(allPerks[idx]);
                             }
 
-                            t.Method("ShowWorker", new object[] { selected }).GetValue();
-                            t.Method("InitializeGroupSkills").GetValue();
+                            t.Method("ShowWorker", new object[] { }).GetValue();
+                            t.Method("SetGroupSkills").GetValue();
                         }
                         else
                         {
@@ -353,8 +355,8 @@ namespace CharacterEdit
 
                             perkIds[perkIndex] = allPerks[allPerksIndex].Name;
                             perks[perkIndex] = allPerks[allPerksIndex];
-                            t.Method("ShowWorker", new object[] { selected }).GetValue();
-                            t.Method("InitializeGroupSkills").GetValue();
+                            t.Method("ShowWorker", new object[] { }).GetValue();
+                            t.Method("SetGroupSkills").GetValue();
                         }
                         return;
                     }
@@ -367,8 +369,8 @@ namespace CharacterEdit
                             align += Input.GetKey(KeyCode.LeftControl) ? 0.1f : 0.01f;
 
                         ti.Field("religiousAlignment").SetValue(Mathf.Clamp01(align));
-                        t.Method("ShowWorker", new object[] { selected }).GetValue();
-                        t.Method("InitializeGroupSkills").GetValue();
+                        t.Method("ShowWorker", new object[] { }).GetValue();
+                        t.Method("SetGroupSkills").GetValue();
                         return;
                     }
                     else if (rcr.gameObject.transform.name == "Age")
@@ -576,37 +578,37 @@ namespace CharacterEdit
                     {
                         string color = workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[0]];
 
-                        int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.FindIndex(s => s == color);
+                        int index = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").SkinColor.FindIndex(s => s == color);
 
                         if (Input.mouseScrollDelta.y < 0 && index > 0)
                         {
                             index--;
                         }
-                        else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor.Count - 1)
+                        else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").SkinColor.Count - 1)
                         {
                             index++;
                         }
                         else
                             return;
-                        workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[0]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.SkinColor[index];
+                        workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[0]] = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").SkinColor[index];
                     }
                     else if (Input.GetKey(KeyCode.LeftShift))
                     {
                         string color = workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[1]];
 
-                        int index = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.FindIndex(s => s == color);
+                        int index = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").HairColor.FindIndex(s => s == color);
 
                         if (Input.mouseScrollDelta.y < 0 && index > 0)
                         {
                             index--;
                         }
-                        else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor.Count - 1)
+                        else if (Input.mouseScrollDelta.y > 0 && index < MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").HairColor.Count - 1)
                         {
                             index++;
                         }
                         else
                             return;
-                        workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[1]] = MonoSingleton<WorkerBaseRepository>.Instance.BaseWorker.HairColor[index];
+                        workerExtraWindow.Worker.Info.PhysicalLook.BodyColors[workerExtraWindow.Worker.Info.PhysicalLook.ShaderParameters[1]] = MonoSingleton<HumanAppearanceRepository>.Instance.GetByID("default").HairColor[index];
 
                     }
                     else
