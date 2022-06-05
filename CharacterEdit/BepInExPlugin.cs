@@ -22,7 +22,7 @@ using UnityEngine.SceneManagement;
 
 namespace CharacterEdit
 {
-    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.6.1")]
+    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.7.1")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -81,11 +81,11 @@ namespace CharacterEdit
                 EventSystem.current.RaycastAll(eventData, raycastResults);
                 foreach (RaycastResult rcr in raycastResults)
                 {
-                    if (rcr.gameObject.transform.parent?.name.StartsWith("CharacterSkill") == true)
+                    if (rcr.gameObject.transform.name == ("SkillInfo"))
                     {
                         Dbgl("scrolled on skill");
                         List<EditableSkillLayoutItemView> workerSkills = t.Field("workerSkills").GetValue<List<EditableSkillLayoutItemView>>();
-                        string skillName = rcr.gameObject.transform.parent.Find("Name").GetComponentInChildren<TextMeshProUGUI>().text;
+                        string skillName = rcr.gameObject.transform.Find("Name").GetComponentInChildren<TextMeshProUGUI>().text;
                         int skillIdx = workers[selected].Skills.Skills.FindIndex(s => skillName == Singleton<LocalizationController>.Instance.GetText("skill_name_" + s.Id.ToString()));
                         Traverse ts = Traverse.Create(workers[selected].Skills.Skills[skillIdx]);
 
@@ -204,14 +204,14 @@ namespace CharacterEdit
                         else if (Input.GetKey(KeyCode.LeftControl))
                         {
                             tc.Field("creationID").SetValue(0);
-                            if (workers[selected].Info.Gender == Gender.Female)
-                                ti.Field("gender").SetValue(Gender.Male);
+                            if (workers[selected].Info.BodyType == BodyType.Female)
+                                ti.Field("gender").SetValue(BodyType.Male);
                             else
-                                ti.Field("gender").SetValue(Gender.Female);
-                            ti.Field("height").SetValue(tg.Method("GetHeight", new object[] { workers[selected].Info.Gender }).GetValue<float>());
+                                ti.Field("gender").SetValue(BodyType.Female);
+                            ti.Field("height").SetValue(tg.Method("GetHeight", new object[] { workers[selected].Info.BodyType }).GetValue<float>());
                             ti.Field("weightCoefficient").SetValue(tg.Method("GetWeightCoefficient", new object[] { workers[selected].Info.Height }).GetValue<float>());
 
-                            workers[selected].Info.SetIgnoredTypes(tg.Method("GetPhysicalIgnoreTypes", new object[] { new List<WorkerCharacteristicType>(), workers[selected].Info.Gender, workers[selected].Info.Height, workers[selected].Info.WeightCoefficient }).GetValue<List<WorkerCharacteristicType>>());
+                            workers[selected].Info.SetIgnoredTypes(tg.Method("GetPhysicalIgnoreTypes", new object[] { new List<WorkerCharacteristicType>(), workers[selected].Info.BodyType, workers[selected].Info.Height, workers[selected].Info.WeightCoefficient }).GetValue<List<WorkerCharacteristicType>>());
                             workers[selected].Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workers[selected] }).GetValue<WorkerPhysicalLook>());
                         }
                         else if (Input.GetKey(KeyCode.LeftAlt))
@@ -302,12 +302,14 @@ namespace CharacterEdit
                     }
                     else if (rcr.gameObject.transform.parent?.name == "PerksList")
                     {
+                        Dbgl("scrolled on perks list");
+
                         if (Input.GetKey(KeyCode.LeftControl))
                         {
                             List<string> perkIds = tc.Field("perkIds").GetValue<List<string>>();
                             List<Perk> perks = tc.Field("perks").GetValue<List<Perk>>();
 
-                            List<Perk> allPerks = Traverse.Create(MonoSingleton<PerkRepository>.Instance).Field("perks").GetValue<List<Perk>>();
+                            List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll(p => true).ToList();
 
                             if (Input.mouseScrollDelta.y < 0 && perks.Count > 1)
                             {
@@ -328,15 +330,17 @@ namespace CharacterEdit
                         }
                         else
                         {
-                            PerkTooltipView perkTooltipView = rcr.gameObject.GetComponent<PerkTooltipView>();
                             List<string> perkIds = tc.Field("perkIds").GetValue<List<string>>();
                             List<Perk> perks = tc.Field("perks").GetValue<List<Perk>>();
-                            string perkId = Traverse.Create(perkTooltipView).Field("id").GetValue<string>();
+                            int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
+                            string perkId = perks[perkIndex].GetID();
 
-                            List<Perk> allPerks = Traverse.Create(MonoSingleton<PerkRepository>.Instance).Field("perks").GetValue<List<Perk>>();
+                            List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll(p => true).ToList();
                             int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
 
-                            int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
+                            Dbgl($"perk id {perkId}");
+
+
                             int perkInt = int.Parse(perkId.Split('_')[1]);
                             if (Input.mouseScrollDelta.y < 0 && allPerksIndex > 0)
                             {
@@ -352,6 +356,7 @@ namespace CharacterEdit
                                 if (allPerksIndex >= allPerks.Count)
                                     return;
                             }
+                            Dbgl($"perk index {perkIndex}/{perkIds.Count},{perks.Count}; all index {allPerksIndex}/{allPerks.Count}");
 
                             perkIds[perkIndex] = allPerks[allPerksIndex].Name;
                             perks[perkIndex] = allPerks[allPerksIndex];
@@ -564,14 +569,14 @@ namespace CharacterEdit
                     {
                         return;
                         tc.Field("creationID").SetValue(0);
-                        if (workerExtraWindow.Worker.Info.Gender == Gender.Female)
-                            ti.Field("gender").SetValue(Gender.Male);
+                        if (workerExtraWindow.Worker.Info.BodyType == BodyType.Female)
+                            ti.Field("gender").SetValue(BodyType.Male);
                         else
-                            ti.Field("gender").SetValue(Gender.Female);
-                        ti.Field("height").SetValue(tg.Method("GetHeight", new object[] { workerExtraWindow.Worker.Info.Gender }).GetValue<float>());
+                            ti.Field("gender").SetValue(BodyType.Female);
+                        ti.Field("height").SetValue(tg.Method("GetHeight", new object[] { workerExtraWindow.Worker.Info.BodyType }).GetValue<float>());
                         ti.Field("weightCoefficient").SetValue(tg.Method("GetWeightCoefficient", new object[] { workerExtraWindow.Worker.Info.Height }).GetValue<float>());
 
-                        workerExtraWindow.Worker.Info.SetIgnoredTypes(tg.Method("GetPhysicalIgnoreTypes", new object[] { new List<WorkerCharacteristicType>(), workerExtraWindow.Worker.Info.Gender, workerExtraWindow.Worker.Info.Height, workerExtraWindow.Worker.Info.WeightCoefficient }).GetValue<List<WorkerCharacteristicType>>());
+                        workerExtraWindow.Worker.Info.SetIgnoredTypes(tg.Method("GetPhysicalIgnoreTypes", new object[] { new List<WorkerCharacteristicType>(), workerExtraWindow.Worker.Info.BodyType, workerExtraWindow.Worker.Info.Height, workerExtraWindow.Worker.Info.WeightCoefficient }).GetValue<List<WorkerCharacteristicType>>());
                         workerExtraWindow.Worker.Info.SetPhysicalLook(tg.Method("GetPhysicalLook", new object[] { workerExtraWindow.Worker }).GetValue<WorkerPhysicalLook>());
                     }
                     else if (Input.GetKey(KeyCode.LeftAlt))
@@ -663,7 +668,7 @@ namespace CharacterEdit
                 {
                     List<string> perkIds = tc.Field("perkIds").GetValue<List<string>>();
                     List<Perk> perks = tc.Field("perks").GetValue<List<Perk>>();
-                    List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll().ToList<Perk>();
+                    List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll(p => true).ToList();
 
                     if (Input.GetKey(KeyCode.LeftControl))
                     {
@@ -683,12 +688,9 @@ namespace CharacterEdit
                     }
                     else
                     {
-                        PerkTooltipView perkTooltipView = rcr.gameObject.GetComponent<PerkTooltipView>();
-                        string perkId = Traverse.Create(perkTooltipView).Field("id").GetValue<string>();
-
-                        int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
-
                         int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
+                        string perkId = perks[perkIndex].GetID();
+                        int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
                         int perkInt = int.Parse(perkId.Split('_')[1]);
                         if (Input.mouseScrollDelta.y < 0 && allPerksIndex > 0)
                         {

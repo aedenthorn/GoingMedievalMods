@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace DevTools
 {
-    [BepInPlugin("aedenthorn.DevTools", "Dev Tools", "0.3.0")]
+    [BepInPlugin("aedenthorn.DevTools", "Dev Tools", "0.3.1")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;

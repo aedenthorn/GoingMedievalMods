@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>$(ProjectName)</AssemblyName>
     <RootNamespace>$(ProjectName)</RootNamespace>
-    <TargetFramework>net452</TargetFramework>
+    <TargetFramework>net480</TargetFramework>
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
@@ -37,7 +37,7 @@
   <!-- Set start action -->
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <StartAction>Program</StartAction>
-    <StartProgram>$(GamePath)\valheim.exe</StartProgram>
+    <StartProgram>$(GamePath)\Going Medieval.exe</StartProgram>
     <StartArguments>-console</StartArguments>
     <StartWorkingDirectory>$(GamePath)</StartWorkingDirectory>
   </PropertyGroup>
