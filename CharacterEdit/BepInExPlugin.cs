@@ -22,7 +22,7 @@ using UnityEngine.SceneManagement;
 
 namespace CharacterEdit
 {
-    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.7.1")]
+    [BepInPlugin("aedenthorn.CharacterEdit", "Character Edit", "0.9.0")]
     public partial class BepInExPlugin : BaseUnityPlugin
     {
         private static BepInExPlugin context;
@@ -269,7 +269,8 @@ namespace CharacterEdit
                         int index;
                         if (Input.GetKey(KeyCode.LeftControl))
                         {
-                            List<BackStory> backstories = (List<BackStory>)typeof(BackgroundRepositoryBase<BackStoryRepository, BackStory>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackStoryRepository>.Instance);
+                            var ignore = MonoSingleton<WorkerGenerator>.Instance.GetPhysicalIgnoreTypes(new List<WorkerCharacteristicType>(), workers[selected].Info.BodyType, workers[selected].Info.Height, workers[selected].Info.WeightCoefficient);
+                            List<BackStory> backstories = MonoSingleton<BackStoryRepository>.Instance.GetAvailableBackgrounds(ignore);
                             index = backstories.FindIndex(b => b == workers[selected].Info.BackStory);
                             if (Input.mouseScrollDelta.y < 0 && index > 0)
                             {
@@ -283,7 +284,8 @@ namespace CharacterEdit
                         }
                         else
                         {
-                            List<Background> backgrounds = (List<Background>)typeof(BackgroundRepositoryBase<BackgroundRepository, Background>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackgroundRepository>.Instance);
+                            var ignore = MonoSingleton<WorkerGenerator>.Instance.GetPhysicalIgnoreTypes(new List<WorkerCharacteristicType>(), workers[selected].Info.BodyType, workers[selected].Info.Height, workers[selected].Info.WeightCoefficient);
+                            List<Background> backgrounds = MonoSingleton<BackgroundRepository>.Instance.GetAvailableBackgrounds(ignore);
                             index = backgrounds.FindIndex(b => b == workers[selected].Info.Background);
                             if (Input.mouseScrollDelta.y < 0 && index > 0)
                             {
@@ -309,7 +311,7 @@ namespace CharacterEdit
                             List<string> perkIds = tc.Field("perkIds").GetValue<List<string>>();
                             List<Perk> perks = tc.Field("perks").GetValue<List<Perk>>();
 
-                            List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll(p => true).ToList();
+                            List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.AllItems.ToList();
 
                             if (Input.mouseScrollDelta.y < 0 && perks.Count > 1)
                             {
@@ -335,13 +337,9 @@ namespace CharacterEdit
                             int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
                             string perkId = perks[perkIndex].GetID();
 
-                            List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll(p => true).ToList();
+                            List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.AllItems.ToList();
                             int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
 
-                            Dbgl($"perk id {perkId}");
-
-
-                            int perkInt = int.Parse(perkId.Split('_')[1]);
                             if (Input.mouseScrollDelta.y < 0 && allPerksIndex > 0)
                             {
                                 while (allPerksIndex >= 0 && perkIds.Contains(allPerks[allPerksIndex].Name))
@@ -416,10 +414,10 @@ namespace CharacterEdit
                 lastMousePos = Input.mousePosition;
                 return;
             }
-            var selectionPanel = AccessTools.FieldRefAccess<UIController, SelectionPanelManager>(MonoSingleton<UIController>.Instance, "selectionPanel");
+            var selectionPanel = MonoSingleton<UIController>.Instance.SelectionPanel;
             if (selectionPanel == null || !selectionPanel.MainPanel.activeSelf)
                 return;
-            var workerExtraWindow = AccessTools.FieldRefAccess<SelectionPanelView, SelectionExtraWorker> (selectionPanel.PanelView, "workerExtraWindow");
+            var workerExtraWindow = AccessTools.FieldRefAccess<SelectionPanelView, SelectionExtraWorker> (selectionPanel.PanelView, "workerExtraPanel");
             if (workerExtraWindow == null || !workerExtraWindow.gameObject.activeSelf)
                 return;
 
@@ -635,7 +633,8 @@ namespace CharacterEdit
                     int index;
                     if (Input.GetKey(KeyCode.LeftControl))
                     {
-                        List<BackStory> backstories = (List<BackStory>)typeof(BackgroundRepositoryBase<BackStoryRepository, BackStory>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackStoryRepository>.Instance);
+                        var ignore = MonoSingleton<WorkerGenerator>.Instance.GetPhysicalIgnoreTypes(new List<WorkerCharacteristicType>(), workerExtraWindow.Worker.Info.BodyType, workerExtraWindow.Worker.Info.Height, workerExtraWindow.Worker.Info.WeightCoefficient);
+                        List<BackStory> backstories = MonoSingleton<BackStoryRepository>.Instance.GetAvailableBackgrounds(ignore);
                         index = backstories.FindIndex(b => b == workerExtraWindow.Worker.Info.BackStory);
                         if (Input.mouseScrollDelta.y < 0 && index > 0)
                         {
@@ -649,7 +648,8 @@ namespace CharacterEdit
                     }
                     else
                     {
-                        List<Background> backgrounds = (List<Background>)typeof(BackgroundRepositoryBase<BackgroundRepository, Background>).GetField("backgrounds", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(MonoSingleton<BackgroundRepository>.Instance);
+                        var ignore = MonoSingleton<WorkerGenerator>.Instance.GetPhysicalIgnoreTypes(new List<WorkerCharacteristicType>(), workerExtraWindow.Worker.Info.BodyType, workerExtraWindow.Worker.Info.Height, workerExtraWindow.Worker.Info.WeightCoefficient);
+                        List<Background> backgrounds = MonoSingleton<BackgroundRepository>.Instance.GetAvailableBackgrounds(ignore);
                         index = backgrounds.FindIndex(b => b == workerExtraWindow.Worker.Info.Background);
                         if (Input.mouseScrollDelta.y < 0 && index > 0)
                         {
@@ -668,7 +668,7 @@ namespace CharacterEdit
                 {
                     List<string> perkIds = tc.Field("perkIds").GetValue<List<string>>();
                     List<Perk> perks = tc.Field("perks").GetValue<List<Perk>>();
-                    List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.GetAll(p => true).ToList();
+                    List<Perk> allPerks = MonoSingleton<PerkRepository>.Instance.AllItems.ToList();
 
                     if (Input.GetKey(KeyCode.LeftControl))
                     {
@@ -689,9 +689,12 @@ namespace CharacterEdit
                     else
                     {
                         int perkIndex = rcr.gameObject.transform.GetSiblingIndex();
+                        Dbgl($"idx {perkIndex}, total {perks.Count}");
                         string perkId = perks[perkIndex].GetID();
+                        Dbgl($"perkid {perkId}");
                         int allPerksIndex = allPerks.FindIndex(p => p.Name == perkId);
-                        int perkInt = int.Parse(perkId.Split('_')[1]);
+                        Dbgl($"allperksidx {allPerksIndex}");
+                        Dbgl("3");
                         if (Input.mouseScrollDelta.y < 0 && allPerksIndex > 0)
                         {
                             while (allPerksIndex >= 0 && perkIds.Contains(allPerks[allPerksIndex].Name))
@@ -710,6 +713,7 @@ namespace CharacterEdit
                         perkIds[perkIndex] = allPerks[allPerksIndex].Name;
                         perks[perkIndex] = allPerks[allPerksIndex];
                     }
+                    Dbgl("4");
                     var panel = t.Field("panels").GetValue<SelectionExtraPanelBase[]>()[t.Field("selectedPanel").GetValue<int>()];
                     AccessTools.Field(panel.GetType(), "currentWorker").SetValue(panel, null);
                     AccessTools.Method(panel.GetType(), "CreatePerks").Invoke(panel, new object[] { });
